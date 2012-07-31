@@ -416,8 +416,9 @@ class IpBlock(ModelBase):
 
     def _address_is_allocatable(self, policy, address):
         unavailable_addresses = [self.gateway, self.broadcast]
-        return (address not in unavailable_addresses
-                and self._allowed_by_policy(policy, address))
+        return ((address not in unavailable_addresses
+                 and self._allowed_by_policy(policy, address)) and
+                not self.does_address_exists(address))
 
     def _allowed_by_policy(self, policy, address):
         return policy is None or policy.allows(self.cidr, address)
