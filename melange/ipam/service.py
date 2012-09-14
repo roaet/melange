@@ -375,6 +375,10 @@ class NetworksController(BaseController):
         network = models.Network.find_by(network_id, tenant_id=tenant_id)
         return dict(ip_blocks=[block.data() for block in network.ip_blocks])
 
+    def allocated_ips(self, request, tenant_id, network_id):
+        network = models.Network.find_by(network_id, tenant_id=tenant_id)
+        return sum([block.ips_used() for block in network.ip_blocks])
+
 
 class InterfaceIpAllocationsController(BaseController):
 
