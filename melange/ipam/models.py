@@ -285,7 +285,9 @@ class IpBlock(ModelBase):
 
     @property
     def ips_used(self):
-        allocated_count = IpAddress.find_all(ip_block_id=self.id).count()
+        kwargs = dict(ip_block_id=self.id)
+
+        allocated_count = IpAddress.find_all(**kwargs).count()
         if self.policy_id:
             reserved = self.policy().size(self.cidr)
         else:
@@ -295,6 +297,12 @@ class IpBlock(ModelBase):
     @property
     def percent_used(self):
         return (float(self.ips_used) / self.size()) * 100.0
+
+    def ips_used_filtered(self):
+        kwargs = dict(ip_block_id=self.id,
+                      marked_for_deallocation=None)
+
+        return IpAddress.find_all(**kwargs).count()
 
     def is_ipv6(self):
         return netaddr.IPNetwork(self.cidr).version == 6
@@ -843,15 +851,19 @@ class Interface(ModelBase):
                                 device_id=None,
                                 network_params=None,
                                 **kwargs):
-        interface = Interface.create_and_configure(device_id=device_id,
-                                                   **kwargs)
+        try:
+            interface = Interface.create_and_configure(device_id=device_id,
+                                                       **kwargs)
 
-        if network_params:
-            network = Network.find_or_create_by(
-                network_params.pop('id'),
-                network_params.pop('tenant_id'))
-            network.allocate_ips(interface=interface, **network_params)
-        return interface
+            if network_params:
+                network = Network.find_or_create_by(
+                    network_params.pop('id'),
+                    network_params.pop('tenant_id'))
+                network.allocate_ips(interface=interface, **network_params)
+            return interface
+        except NetworkOverQuotaError:
+            interface.delete()
+            raise
 
     @classmethod
     def create_and_configure(cls, virtual_interface_id=None, device_id=None,
@@ -1106,8 +1118,17 @@ class Network(ModelBase):
             return filter(None, [self._allocate_specific_ip(address, **kwargs)
                                  for address in addresses])
 
-        ips = [self._allocate_first_free_ip(blocks, **kwargs)
-               for blocks in self._block_partitions()]
+        ips = []
+        for blocks in self._block_partitions():
+            # We can only allocate addresses in v4/v6 pairs, so we don't
+            # need to check both
+            for block in blocks:
+                if "max_private" in kwargs and blocks[0].type == "private":
+                    if (blocks[0].ips_used_filtered() >=
+                                    int(kwargs["max_private"])):
+                        raise NetworkOverQuotaError()
+                break
+            ips.append(self._allocate_first_free_ip(blocks, **kwargs))
 
         if not any(ips):
             raise exception.NoMoreAddressesError(
@@ -1185,6 +1206,10 @@ class DuplicateAddressError(exception.MelangeError):
 class AddressDoesNotBelongError(exception.MelangeError):
 
     message = _("Address does not belong here")
+
+
+class NetworkOverQuotaError(exception.MelangeError):
+    message = _("Too many connections on a private network")
 
 
 class AddressLockedError(exception.MelangeError):
