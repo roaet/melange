@@ -42,6 +42,7 @@ class BaseController(wsgi.Controller):
             models.IpNotAllowedOnInterfaceError,
             models.NoMoreMacAddressesError,
             models.AddressDisallowedByPolicyError,
+            models.NetworkOverQuotaError
         ],
         webob.exc.HTTPBadRequest: [
             models.InvalidModelError,
@@ -371,9 +372,14 @@ class PoliciesController(BaseController, ShowAction, DeleteAction):
 
 class NetworksController(BaseController):
 
-    def index(self, request, tenant_id, network_id):
-        network = models.Network.find_by(network_id, tenant_id=tenant_id)
+    def show(self, request, tenant_id, id):
+        network = models.Network.find_by(id, tenant_id=tenant_id)
         return dict(ip_blocks=[block.data() for block in network.ip_blocks])
+
+    def ips_used(self, request, tenant_id, id):
+        network = models.Network.find_by(id, tenant_id=tenant_id)
+        total = [block.ips_used_filtered() for block in network.ip_blocks]
+        return dict(network=dict(id=id, ip_count=sum(total)))
 
 
 class InterfaceIpAllocationsController(BaseController):
@@ -446,11 +452,14 @@ class InstanceInterfacesController(BaseController):
         models.Interface.delete_by(device_id=device_id)
 
         params = self._extract_required_params(body, 'instance')
+        quotas = self._extract_required_params(body, "quotas")
         tenant_id = params['tenant_id']
         created_interfaces = []
         for iface in params['interfaces']:
 
             network_params = utils.stringify_keys(iface.pop('network', None))
+            if quotas:
+                network_params["max_private"] = quotas["max_private"]
             interface = models.Interface.create_and_allocate_ips(
                 device_id=device_id,
                 network_params=network_params,
@@ -481,6 +490,7 @@ class InstanceInterfacesController(BaseController):
             device_id=device_id,
             network_params=network_params,
             **iface_params)
+
         view_data = views.InterfaceConfigurationView(interface).data()
         return dict(interface=view_data)
 
@@ -589,6 +599,16 @@ class APICommon(wsgi.Router):
         self._ip_routes_mapper(mapper)
         self._instance_interface_mapper(mapper)
         self._mac_address_range_mapper(mapper)
+        self._networks_mapper(mapper)
+
+    def _networks_mapper(self, mapper):
+        resource = NetworksController().create_resource()
+        path = "/ipam/tenants/{tenant_id}/networks"
+        mapper.resource("networks", "/{network_id}/%s" % path,
+                        controller=resource)
+        with mapper.submapper(controller=resource, path_prefix=path) as submap:
+            _connect(submap, "/:(id)/ips_used", action="ips_used",
+                     conditions=dict(method=["GET"]))
 
     def _allocated_ips_mapper(self, mapper):
         allocated_ips_res = AllocatedIpAddressesController().create_resource()
@@ -728,15 +748,9 @@ class APICommon(wsgi.Router):
 class APIV01(APICommon):
     def __init__(self):
         super(APIV01, self).__init__()
-        self._networks_mapper(self.map)
         self._interface_ip_allocations_mapper(self.map)
         self._interface_mapper(self.map)
         self._allowed_ips_mapper(self.map)
-
-    def _networks_mapper(self, mapper):
-        resource = NetworksController().create_resource()
-        path = "/ipam/tenants/{tenant_id}/networks/{network_id}"
-        mapper.resource("networks", path, controller=resource)
 
     def _interface_ip_allocations_mapper(self, mapper):
         path = ("/ipam/tenants/{tenant_id}/networks"
