@@ -106,9 +106,10 @@ class IpBlockController(BaseController, DeleteAction, ShowAction):
     def create(self, request, tenant_id, body=None):
         LOG.info("Creating an IP block for tenant '%s'" % tenant_id)
         params = self._extract_required_params(body, 'ip_block')
-        max_alloc = config.Config.get("ip_block_max_allocation", default=3)
+        if "max_allocation" not in params:
+            max_alloc = config.Config.get("ip_block_max_allocation", default=3)
+            params["max_allocation"] = max_alloc
         block = models.IpBlock.create(tenant_id=tenant_id,
-                                      max_allocation=max_alloc,
                                       **params)
         LOG.debug("New IP block parameters: %s" % params)
         return wsgi.Result(dict(ip_block=block.data()), 201)
