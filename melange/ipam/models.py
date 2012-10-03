@@ -1112,7 +1112,7 @@ class Network(ModelBase):
             for block in blocks:
                 if block.max_allocation is not None:
                     if (block.ips_used >= block.max_allocation):
-                        raise NetworkOverQuotaError()
+                        raise NetworkOverQuotaError(block.network_id)
             ips.append(self._allocate_first_free_ip(blocks, **kwargs))
 
         if not any(ips):

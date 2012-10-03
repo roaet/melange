@@ -453,17 +453,21 @@ class InstanceInterfacesController(BaseController):
         params = self._extract_required_params(body, 'instance')
         tenant_id = params['tenant_id']
         created_interfaces = []
-        for iface in params['interfaces']:
+        try:
+            for iface in params['interfaces']:
 
-            network_params = utils.stringify_keys(iface.pop('network', None))
-            interface = models.Interface.create_and_allocate_ips(
-                device_id=device_id,
-                network_params=network_params,
-                tenant_id=tenant_id,
-                **iface)
+                network_params = utils.stringify_keys(iface.pop('network',
+                                                                None))
+                interface = models.Interface.create_and_allocate_ips(
+                    device_id=device_id,
+                    network_params=network_params,
+                    tenant_id=tenant_id,
+                    **iface)
 
-            view_data = views.InterfaceConfigurationView(interface).data()
-            created_interfaces.append(view_data)
+                view_data = views.InterfaceConfigurationView(interface).data()
+                created_interfaces.append(view_data)
+        except models.NetworkOverQuotaError as exc:
+            return wsgi.Result("Network %s Over Quota" % exc, 413)
 
         return {'instance': {'interfaces': created_interfaces}}
 
@@ -482,10 +486,14 @@ class InstanceInterfacesController(BaseController):
         iface_params = self._extract_required_params(body, 'interface')
         network_params = utils.stringify_keys(iface_params.pop('network',
                                                                None))
-        interface = models.Interface.create_and_allocate_ips(
-            device_id=device_id,
-            network_params=network_params,
-            **iface_params)
+        try:
+            interface = models.Interface.create_and_allocate_ips(
+                device_id=device_id,
+                network_params=network_params,
+                **iface_params)
+        except models.NetworkOverQuotaError as exc:
+            return wsgi.Result("Network %s Over Quota" % exc, 413)
+
         view_data = views.InterfaceConfigurationView(interface).data()
         return dict(interface=view_data)
 
