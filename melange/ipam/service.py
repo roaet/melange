@@ -67,10 +67,22 @@ class BaseController(wsgi.Controller):
         return dict([(key, params[key]) for key in params.keys()
                      if key in ["limit", "marker"]])
 
-    def _paginated_response(self, collection_type, collection_query, request):
+    def _paginated_response(self, collection_type, collection_query,
+                            request, filter=None):
         elements, next_marker = collection_query.paginated_collection(
             **self._extract_limits(request.params))
-        collection = [element.data() for element in elements]
+        # NOTE(jkoelker) This is expensive as hell. But without ripping
+        #                out the psuedo-declarative models and using
+        #                sqlalchemy correctly, there is no other way.
+        if filter:
+            collection = []
+            for element in elements:
+                for attr, value in filter.iteritems():
+                    if getattr(element, attr) == value:
+                        collection.append(element.data())
+                        break
+        else:
+            collection = [element.data() for element in elements]
 
         return wsgi.Result(pagination.PaginatedDataView(collection_type,
                                                         collection,
@@ -444,6 +456,33 @@ class InterfacesController(BaseController, ShowAction, DeleteAction):
         LOG.debug("Deleting interface (kwargs=%s)" % kwargs)
         self._model.find_by(**kwargs).delete()
 
+    # NOTE(jkoelker) I know, I don't like it either, but melange
+    #                has become the quantum datastore and we need to
+    #                be able to find out what ports are/should be on
+    #                a network.
+    def index(self, request):
+        filters = utils.filter_dict(request.params, 'network_id',
+                                    'device_id', 'tenant_id')
+        network_id = filters.pop('network_id', None)
+        page_filter = None
+        if network_id:
+            # NOTE(jkoelker) network_id is a synthetic filter (aka
+            #                not a database condition). Prevent
+            #                really really bad runtime by requiring
+            #                a true filter so we arn't iterating
+            #                over every interface. This will have to
+            #                be reworked when/if we allow leasing ports
+            #                on a network.
+            if not filters:
+                msg = ("Filter network_id must be accompanied with "
+                       "another filter (device_id, tenant_id)")
+                return wsgi.Result(msg, 422)
+            page_filter = {'network_id': network_id}
+        LOG.info("Listing all interfaces with filter: %s" % filters)
+        interfaces = self._model.find_all(**filters)
+        return self._paginated_response('interfaces', interfaces, request,
+                                        filter=page_filter)
+
 
 class InstanceInterfacesController(BaseController):
 
@@ -781,6 +820,11 @@ class APIV01(APICommon):
                  controller=interface_res,
                  action="delete",
                  conditions=dict(method=['DELETE']))
+        _connect(mapper,
+                 "/ipam/interfaces",
+                 controller=interface_res,
+                 action="index",
+                 conditions=dict(method=['GET']))
         mapper.resource("interfaces", path, controller=interface_res)
 
     def _allowed_ips_mapper(self, mapper):

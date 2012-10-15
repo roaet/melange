@@ -35,6 +35,9 @@ from melange.common import utils
 LOG = logging.getLogger('melange.ipam.models')
 
 
+# Hours spent emulating sqlalchemy: 5
+
+
 class ModelBase(object):
 
     _fields_for_type_conversion = {}
@@ -129,13 +132,14 @@ class ModelBase(object):
         model_id = self[attribute]
         conditions['id'] = model_id
         if model_id and model_class.get_by(**conditions) is None:
-            conditions_str = ", ".join(
+            args = {}
+            args["conditions_str"] = ", ".join(
                 ["{0} = {1}".format(key, repr(value))
                  for key, value in conditions.iteritems()])
-            model_class_name = model_class.__name__
-            self._add_error(attribute,
-                            _("%(model_class_name)s with %(conditions_str)s"
-                              " doesn't exist") % locals())
+            args["model_class_name"] = model_class.__name__
+            msg = _("%(model_class_name)s with %(conditions_str)s"
+                    " doesn't exist") % args
+            self._add_error(attribute, msg)
 
     @classmethod
     def find(cls, id):
@@ -918,6 +922,10 @@ class Interface(ModelBase):
                 % (dict(address=address,
                         vif_id=self.virtual_interface_id)))
         return ip
+
+    @utils.cached_property
+    def network_id(self):
+        return self.plugged_in_network_id()
 
     def plugged_in_network_id(self):
         interface_ip = IpAddress.get_by(interface_id=self.id)
