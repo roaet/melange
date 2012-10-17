@@ -949,7 +949,7 @@ class TestAllocatedIpAddressController(ControllerTestBase):
 
         tenant1_ip1 = _allocate_ip(block1, interface=interface1)
         tenant1_ip2 = _allocate_ip(block2, interface=interface1)
-        tenant2_ip1 = _allocate_ip(block2, interface=interface2)
+        _allocate_ip(block2, interface=interface2)
 
         response = self.app.get("/ipam/tenants/tnt1/allocated_ip_addresses")
 
@@ -967,7 +967,7 @@ class TestAllocatedIpAddressController(ControllerTestBase):
 
         instance1_ip1 = _allocate_ip(block1, interface=interface1)
         instance1_ip2 = _allocate_ip(block2, interface=interface1)
-        instance2_ip1 = _allocate_ip(block2, interface=interface2)
+        _allocate_ip(block2, interface=interface2)
 
         response = self.app.get("/ipam/allocated_ip_addresses?"
                                 "used_by_device=1")
@@ -990,8 +990,8 @@ class TestAllocatedIpAddressController(ControllerTestBase):
 
         tnt1_device1_ip1 = block1.allocate_ip(interface=interface1)
         tnt1_device1_ip2 = block2.allocate_ip(interface=interface1)
-        tnt1_device2_ip1 = block1.allocate_ip(interface=interface2)
-        tnt2_device1_ip1 = block2.allocate_ip(interface=interface3)
+        block1.allocate_ip(interface=interface2)
+        block2.allocate_ip(interface=interface3)
 
         response = self.app.get("/ipam/tenants/tnt1/allocated_ip_addresses?"
                                 "used_by_device=device1")
@@ -1008,8 +1008,8 @@ class TestAllocatedIpAddressController(ControllerTestBase):
         interface2 = factory_models.InterfaceFactory(tenant_id="tnt2")
 
         tenant1_ip1 = _allocate_ip(block1, interface=interface1)
-        tenant1_ip2 = _allocate_ip(block2, interface=interface1)
-        tenant2_ip1 = _allocate_ip(block2, interface=interface2)
+        _allocate_ip(block2, interface=interface1)
+        _allocate_ip(block2, interface=interface2)
 
         response = self.app.get("/ipam/allocated_ip_addresses?"
                                 "address=" + tenant1_ip1.address)
@@ -1839,14 +1839,14 @@ class TestPoliciesController(ControllerTestBase):
 
     def test_index(self):
         policy1 = factory_models.PolicyFactory(tenant_id="1")
-        policy2 = factory_models.PolicyFactory(tenant_id="2")
-        policy3 = factory_models.PolicyFactory(tenant_id="1")
+        policy2 = factory_models.PolicyFactory(tenant_id="1")
+        factory_models.PolicyFactory(tenant_id="2")
 
         response = self.app.get("/ipam/tenants/1/policies")
 
         self.assertEqual(response.status_int, 200)
         self.assertItemsEqual(response.json["policies"],
-                              _data([policy1, policy3]))
+                              _data([policy1, policy2]))
 
     def test_create(self):
         response = self.app.post_json("/ipam/tenants/1111/policies",
@@ -1937,8 +1937,8 @@ class TestNetworksController(ControllerTestBase):
         factory = factory_models.PrivateIpBlockFactory
         blocks = [factory(tenant_id="tnt_id", network_id="1"),
                   factory(tenant_id="tnt_id", network_id="1")]
-        other_tenant_block = factory(tenant_id="other_tnt_id", network_id="1")
-        other_networks_block = factory(tenant_id="tnt_id", network_id="22")
+        factory(tenant_id="other_tnt_id", network_id="1")
+        factory(tenant_id="tnt_id", network_id="22")
 
         response = self.app.get("/ipam/tenants/tnt_id/networks/1")
 
@@ -1947,8 +1947,8 @@ class TestNetworksController(ControllerTestBase):
 
     def test_index_raises_404_if_no_ip_blocks_exist_for_network(self):
         factory = factory_models.PrivateIpBlockFactory
-        other_tenant_block = factory(tenant_id="other_tnt_id", network_id="1")
-        other_networks_block = factory(tenant_id="tnt_id", network_id="22")
+        factory(tenant_id="other_tnt_id", network_id="1")
+        factory(tenant_id="tnt_id", network_id="22")
 
         response = self.app.get("/ipam/tenants/tnt_id/networks/1", status="*")
 
@@ -1976,8 +1976,7 @@ class TestInterfaceIpAllocationsController(ControllerTestBase):
         self.assertEqual(interface.virtual_interface_id, "123")
 
     def test_create_makes_network_owner_the_interface_owner_by_default(self):
-        network_1_block = factory_models.IpBlockFactory(tenant_id="tnt_id",
-                                                        network_id="1")
+        factory_models.IpBlockFactory(tenant_id="tnt_id", network_id="1")
 
         path = "/ipam/tenants/tnt_id/networks/1/interfaces/123/ip_allocations"
         response = self.app.post_json(path)
@@ -2275,9 +2274,9 @@ class TestInterfacesController(ControllerTestBase):
                                                 vif_id_on_device="vif_id")
         mac = models.MacAddress.create(address="ab:bc:cd:12:23:34",
                                        interface_id=iface.id)
-        ip1 = factory_models.IpAddressFactory(interface_id=iface.id)
-        ip2 = factory_models.IpAddressFactory(interface_id=iface.id)
-        noise_ip = factory_models.IpAddressFactory()
+        factory_models.IpAddressFactory(interface_id=iface.id)
+        factory_models.IpAddressFactory(interface_id=iface.id)
+        factory_models.IpAddressFactory()
 
         response = self.app.get("/ipam/tenants/tnt_id/interfaces/vif_id")
 
@@ -2288,6 +2287,116 @@ class TestInterfacesController(ControllerTestBase):
         self.assertEqual(len(iface_data['ip_addresses']), 2)
         self.assertEqual(iface_data['ip_addresses'],
                          views.IpConfigurationView(*iface.ip_addresses).data())
+
+    def test_index(self):
+        factory_models.InterfaceFactory(tenant_id="tnt1")
+        factory_models.InterfaceFactory(tenant_id="tnt2")
+
+        response = self.app.get("/ipam/interfaces")
+
+        self.assertEqual(response.status_int, 200)
+        interfaces = response.json["interfaces"]
+        self.assertEqual(len(interfaces), 2)
+
+    def test_index_db_filters(self):
+        factory_models.InterfaceFactory(tenant_id="tnt1",
+                                        device_id="device1")
+        factory_models.InterfaceFactory(tenant_id="tnt2",
+                                        device_id="device2")
+
+        response = self.app.get("/ipam/interfaces?device_id=device2")
+
+        self.assertEqual(response.status_int, 200)
+        interfaces = response.json["interfaces"]
+        self.assertEqual(len(interfaces), 1)
+
+    def test_index_synthetic_filters(self):
+        factory_models.PrivateIpBlockFactory(tenant_id="RAX",
+                                             network_id="public_net",
+                                             cidr="10.0.0.0/24")
+        factory_models.PrivateIpBlockFactory(tenant_id="RAX",
+                                             network_id="other_net",
+                                             cidr="172.16.0.0/24")
+
+        self.app.post_json("/ipam/interfaces",
+                           {'interface': {
+                            'id': "virt_iface1",
+                            'device_id': "device_1",
+                            'tenant_id': "tnt",
+                            }
+                            })
+
+        self.app.post_json("/ipam/interfaces",
+                           {'interface': {
+                            'id': "virt_iface2",
+                            'device_id': "device_2",
+                            'tenant_id': "tnt",
+                            }
+                            })
+
+        self.app.post_json("/ipam/tenants/RAX/networks/public_net/"
+                           "interfaces/virt_iface1/ip_allocations",
+                           {'network': {
+                            'tenant_id': "tnt",
+                            }
+                            })
+
+        self.app.post_json("/ipam/tenants/RAX/networks/other_net/"
+                           "interfaces/virt_iface2/ip_allocations",
+                           {'network': {
+                            'tenant_id': "tnt",
+                            }
+                            })
+
+        path = "/ipam/interfaces?network_id=public_net&tenant_id=tnt"
+        response = self.app.get(path)
+
+        self.assertEqual(response.status_int, 200)
+        interfaces = response.json["interfaces"]
+        self.assertEqual(len(interfaces), 1)
+
+    def test_index_synthetic_filters_require_condition(self):
+        factory_models.PrivateIpBlockFactory(tenant_id="RAX",
+                                             network_id="public_net",
+                                             cidr="10.0.0.0/24")
+        factory_models.PrivateIpBlockFactory(tenant_id="RAX",
+                                             network_id="other_net",
+                                             cidr="172.16.0.0/24")
+
+        self.app.post_json("/ipam/interfaces",
+                           {'interface': {
+                            'id': "virt_iface1",
+                            'device_id': "device_1",
+                            'tenant_id': "tenant_of_instance",
+                            }
+                            })
+
+        self.app.post_json("/ipam/interfaces",
+                           {'interface': {
+                            'id': "virt_iface2",
+                            'device_id': "device_2",
+                            'tenant_id': "tenant_of_instance",
+                            }
+                            })
+
+        self.app.post_json("/ipam/tenants/RAX/networks/public_net/"
+                           "interfaces/virt_iface1/ip_allocations",
+                           {'network': {
+                            'tenant_id': "tenant_of_instance",
+                            }
+                            })
+
+        self.app.post_json("/ipam/tenants/RAX/networks/other_net/"
+                           "interfaces/virt_iface2/ip_allocations",
+                           {'network': {
+                            'tenant_id': "tenant_of_instance",
+                            }
+                            })
+
+        response = self.app.get("/ipam/interfaces?network_id=public_net",
+                                expect_errors=True)
+
+        self.assertEqual(response.status_int, 422)
 
     def test_interface_create_and_then_allocate_ips(self):
         ip_block = factory_models.PrivateIpBlockFactory(
@@ -2362,8 +2471,8 @@ class TestInstanceInterfacesController(ControllerTestBase):
             'tenant_id': "tenant",
             'interfaces': [{'network': {'id': 'net_id', 'tenant_id':"RAX"}}]}}
 
-        response = self.app.put_json("/ipam/instances/instance_id/interfaces",
-                                     put_data)
+        path = "/ipam/instances/instance_id/interfaces"
+        self.app.put_json(path, put_data)
 
         self.assertTrue(models.IpAddress.get(
                         previous_ip.id).marked_for_deallocation)
@@ -2390,9 +2499,9 @@ class TestInstanceInterfacesController(ControllerTestBase):
         self._setup_interface_and_ip("instance_id",
                                      "tenant",
                                      provider_block)
-        noise_iface = self._setup_interface_and_ip("other_instance",
-                                                   "tenant",
-                                                   provider_block)
+        self._setup_interface_and_ip("other_instance",
+                                     "tenant",
+                                     provider_block)
 
         self.app.delete("/ipam/instances/instance_id/interfaces")
 
@@ -2444,9 +2553,9 @@ class TestInstanceInterfacesController(ControllerTestBase):
     def test_show_an_interface_raises_404_for_non_existant_interface(self):
         provider_block = factory_models.IpBlockFactory(tenant_id="RAX",
                                                        network_id="net_id")
-        noise_ip = self._setup_interface_and_ip("instance_id",
-                                                "leasee_tenant",
-                                                provider_block)
+        self._setup_interface_and_ip("instance_id",
+                                     "leasee_tenant",
+                                     provider_block)
 
         response = self.app.get("/ipam/instances/instance_id/interfaces/"
                                 "bad_iface_id", status="*")
@@ -2498,9 +2607,9 @@ class TestInstanceInterfacesController(ControllerTestBase):
     def test_delete_an_interface_raises_404_for_non_existant_interface(self):
         provider_block = factory_models.IpBlockFactory(tenant_id="RAX",
                                                        network_id="net_id")
-        noise_ip = self._setup_interface_and_ip("instance_id",
-                                                "leasee_tenant",
-                                                provider_block)
+        self._setup_interface_and_ip("instance_id",
+                                     "leasee_tenant",
+                                     provider_block)
 
         response = self.app.delete("/ipam/instances/instance_id/interfaces/"
                                    "bad_iface_id", status="*")
@@ -2659,7 +2768,8 @@ class TestMacAddressRangesController(ControllerTestBase):
     def test_delete(self):
         rng = factory_models.MacAddressRangeFactory()
 
-        response = self.app.delete("/ipam/mac_address_ranges/%s" % rng.id)
+        path = "/ipam/mac_address_ranges/%s" % rng.id
+        self.app.delete(path)
 
         self.assertIsNone(models.MacAddressRange.get(rng.id))
 
@@ -2683,7 +2793,7 @@ class TestInterfaceAllowedIpsController(ControllerTestBase):
         ip1 = ip_factory(ip_block_id=block_factory(network_id="1").id)
         ip2 = ip_factory(ip_block_id=block_factory(network_id="1").id)
         ip3 = ip_factory(ip_block_id=block_factory(network_id="1").id)
-        ip4 = ip_factory(ip_block_id=block_factory(network_id="1").id)
+        ip_factory(ip_block_id=block_factory(network_id="1").id)
         interface.allow_ip(ip1)
         interface.allow_ip(ip2)
         interface.allow_ip(ip3)
@@ -2695,8 +2805,8 @@ class TestInterfaceAllowedIpsController(ControllerTestBase):
                               _data([ip1, ip2, ip3, ip_on_interface]))
 
     def test_index_returns_404_when_interface_doesnt_exist(self):
-        noise_interface = factory_models.InterfaceFactory(
-            tenant_id="tnt_id", vif_id_on_device="vif_id")
+        factory_models.InterfaceFactory(tenant_id="tnt_id",
+                                        vif_id_on_device="vif_id")
         response = self.app.get(
             "/ipam/tenants/tnt_id/interfaces/bad_vif_id/allowed_ips",
             status="*")
@@ -2706,8 +2816,8 @@ class TestInterfaceAllowedIpsController(ControllerTestBase):
                                  "Interface Not Found")
 
     def test_index_return_404_when_interface_doesnt_belong_to_tenant(self):
-        interface = factory_models.InterfaceFactory(
-            tenant_id="tnt_id", vif_id_on_device="vif_id")
+        factory_models.InterfaceFactory(tenant_id="tnt_id",
+                                        vif_id_on_device="vif_id")
         response = self.app.get(
             "/ipam/tenants/bad_tnt_id/interfaces/vif_id/allowed_ips",
             status="*")
@@ -2720,7 +2830,7 @@ class TestInterfaceAllowedIpsController(ControllerTestBase):
         interface = factory_models.InterfaceFactory(
             tenant_id="tnt_id", vif_id_on_device="vif_id")
         block = factory_models.IpBlockFactory(network_id="net123")
-        ip_on_interface = block.allocate_ip(interface)
+        block.allocate_ip(interface)
 
         block = factory_models.IpBlockFactory(network_id="net123")
         ip = block.allocate_ip(factory_models.InterfaceFactory(
@@ -2735,8 +2845,8 @@ class TestInterfaceAllowedIpsController(ControllerTestBase):
         self.assertEqual(response.json['ip_address'], _data(ip))
 
     def test_create_raises_404_when_interface_doesnt_exist(self):
-        noise_interface = factory_models.InterfaceFactory(
-            tenant_id="tnt_id", vif_id_on_device="vif_id")
+        factory_models.InterfaceFactory(tenant_id="tnt_id",
+                                        vif_id_on_device="vif_id")
         block = factory_models.IpBlockFactory(network_id="net123")
         ip = block.allocate_ip(factory_models.InterfaceFactory(
             tenant_id="tnt_id"))
@@ -2783,8 +2893,8 @@ class TestInterfaceAllowedIpsController(ControllerTestBase):
         self.assertEqual(interface.ips_allowed(), [ip_on_interface])
 
     def test_delete_fails_for_non_existent_interface(self):
-        noise_interface = factory_models.InterfaceFactory(
-            tenant_id="tnt_id", vif_id_on_device="vif_id")
+        factory_models.InterfaceFactory(tenant_id="tnt_id",
+                                        vif_id_on_device="vif_id")
 
         response = self.app.delete("/ipam/tenants/tnt_id/interfaces/"
                                    "bad_iface_id/allowed_ips/10.1.1.1",
@@ -2811,7 +2921,7 @@ class TestInterfaceAllowedIpsController(ControllerTestBase):
         interface = factory_models.InterfaceFactory(
             tenant_id="tnt_id", vif_id_on_device="vif_id")
         block = factory_models.IpBlockFactory(network_id="net123")
-        ip_on_interface = block.allocate_ip(interface)
+        block.allocate_ip(interface)
         allowed_ip = block.allocate_ip(factory_models.InterfaceFactory())
         interface.allow_ip(allowed_ip)
 
