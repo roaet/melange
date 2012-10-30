@@ -851,11 +851,15 @@ class Interface(ModelBase):
         interface = Interface.create_and_configure(device_id=device_id,
                                                    **kwargs)
 
-        if network_params:
-            network = Network.find_or_create_by(
-                network_params.pop('id'),
-                network_params.pop('tenant_id'))
-            network.allocate_ips(interface=interface, **network_params)
+        try:
+            if network_params:
+                network = Network.find_or_create_by(
+                    network_params.pop('id'),
+                    network_params.pop('tenant_id'))
+                network.allocate_ips(interface=interface, **network_params)
+        except NetworkOverQuotaError:
+            interface.delete()
+            raise
         return interface
 
     @classmethod
