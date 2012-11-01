@@ -855,6 +855,22 @@ class APIV10(APICommon):
     def __init__(self):
         super(APIV10, self).__init__()
         self._instance_interface_ips_mapper(self.map)
+        self._interface_mapper(self.map)
+
+    def _interface_mapper(self, mapper):
+        interface_res = InterfacesController().create_resource()
+        path = "/ipam/interfaces"
+        _connect(mapper,
+                 "/ipam/interfaces/{virtual_interface_id}",
+                 controller=interface_res,
+                 action="delete",
+                 conditions=dict(method=['DELETE']))
+        _connect(mapper,
+                 "/ipam/interfaces",
+                 controller=interface_res,
+                 action="index",
+                 conditions=dict(method=['GET']))
+        mapper.resource("interfaces", path, controller=interface_res)
 
     def _instance_interface_ips_mapper(self, mapper):
         res = InstanceInterfaceIpsController().create_resource()
