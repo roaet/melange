@@ -35,7 +35,6 @@ LOG = logging.getLogger('melange.db.sqlalchemy.session')
 
 
 def configure_db(options, models_mapper=None):
-    configure_sqlalchemy_log(options)
     global _ENGINE
     if not _ENGINE:
         _ENGINE = _create_engine(options)
@@ -43,16 +42,6 @@ def configure_db(options, models_mapper=None):
         models_mapper.map(_ENGINE)
     else:
         mappers.map(_ENGINE, ipam.models.persisted_models())
-
-
-def configure_sqlalchemy_log(options):
-    debug = config.get_option(options, 'debug', type='bool', default=False)
-    verbose = config.get_option(options, 'verbose', type='bool', default=False)
-    logger = logging.getLogger('sqlalchemy.engine')
-    if debug:
-        logger.setLevel(logging.DEBUG)
-    elif verbose:
-        logger.setLevel(logging.INFO)
 
 
 class MySQLPingListener(object):

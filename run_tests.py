@@ -335,7 +335,7 @@ class MelangeTestRunner(core.TextTestRunner):
 
 
 if __name__ == '__main__':
-    logger = logging.getLogger()
+    logger = logging.getLogger('melange')
     hdlr = logging.StreamHandler()
     formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
     hdlr.setFormatter(formatter)

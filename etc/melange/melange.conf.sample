@@ -5,6 +5,9 @@ verbose = False
 # Show debugging output in logs (sets DEBUG log level output)
 debug = False
 
+# Logging for packages used by melange
+#default_log_levels = sqlalchemy=WARN,keystone=INFO,eventlet.wsgi.server=WARN
+
 # Address to bind the API server
 bind_host = 0.0.0.0
 
