@@ -35,11 +35,11 @@ class TestVersionsController(tests.BaseTest):
         v01link = [{'href': "http://localhost/v0.1", 'rel': 'self'}]
         v10link = [{'href': "http://localhost/v1.0", 'rel': 'self'}]
         self.assertEqual(response.json, {'versions':
-                                         [{'status':'DEPRECATED',
+                                         [{'status': 'DEPRECATED',
                                            'name': 'v0.1',
                                            'links': v01link,
                                            },
-                                          {'status':'CURRENT',
+                                          {'status': 'CURRENT',
                                            'name': 'v1.0',
                                            'links': v10link,
                                            }]
