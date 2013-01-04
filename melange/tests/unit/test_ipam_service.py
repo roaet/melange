@@ -2469,7 +2469,8 @@ class TestInstanceInterfacesController(ControllerTestBase):
                                                    provider_block)
         put_data = {'instance': {
             'tenant_id': "tenant",
-            'interfaces': [{'network': {'id': 'net_id', 'tenant_id':"RAX"}}]}}
+            'interfaces': [{'network': {'id': 'net_id',
+                                        'tenant_id': "RAX"}}]}}
 
         path = "/ipam/instances/instance_id/interfaces"
         self.app.put_json(path, put_data)

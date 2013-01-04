@@ -506,7 +506,7 @@ class IpBlock(ModelBase):
         if self.type != self.PUBLIC_TYPE:
             return
         for block in IpBlock.find_all(type=self.PUBLIC_TYPE, parent_id=None):
-            if  self != block and self._overlaps(block):
+            if self != block and self._overlaps(block):
                 msg = _("cidr overlaps with public block %s") % block.cidr
                 self._add_error('cidr', msg)
                 break

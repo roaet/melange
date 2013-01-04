@@ -240,7 +240,7 @@ class DummyApp(wsgi.Router):
 class StubController(wsgi.Controller):
 
     def index(self, request, format=None):
-        return  {'fort': 'knox'}
+        return {'fort': 'knox'}
 
 
 class TestController(tests.BaseTest):

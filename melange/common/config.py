@@ -55,10 +55,10 @@ def setup_logging(options, conf):
     log_config = (options.get('log_config') or
                   get_option(conf, 'log_config', default=None))
     default_log_levels = (options.get('default_log_levels') or
-                  get_option(conf, 'default_log_levels',
-                  default="sqlalchemy=WARN, "
-                          "keystone=INFO, "
-                          "eventlet.wsgi.server=WARN"))
+                          get_option(conf, 'default_log_levels',
+                          default="sqlalchemy=WARN, "
+                                  "keystone=INFO, "
+                                  "eventlet.wsgi.server=WARN"))
     if log_config:
         # Use a logging configuration file for all settings...
         if os.path.exists(log_config):
@@ -134,7 +134,9 @@ class Config(object):
     def load_paste_app(cls, app_name, options, args, config_dir=None):
         # Loading code is here to call correct logging setup. (mdragon)
         conf_file, conf = openstack_config.load_paste_config(app_name,
-                                         options, args, config_dir=None)
+                                                             options,
+                                                             args,
+                                                             config_dir=None)
         try:
             # Setup logging early, supplying both the CLI options and the
             # configuration mapping from the config file
@@ -145,10 +147,12 @@ class Config(object):
                 cls._show_debug_info(app_name, conf, conf_file)
 
             app = deploy.loadapp("config:%s" % conf_file, name=app_name)
-        except (LookupError, ImportError), e:
+        except (LookupError, ImportError) as e:
             raise RuntimeError("Unable to load %(app_name)s from "
                                "configuration file %(conf_file)s."
-                               "\nGot: %(e)r" % locals())
+                               "\nGot: %(e)r" % {'app_name': app_name,
+                                                 'conf_file': conf_file,
+                                                 'e': e})
         cls.instance = conf
         return conf, app
 
@@ -180,7 +184,9 @@ class Config(object):
     @classmethod
     def load_paste_config(cls, app_name, options, args, config_dir=None):
         conf_file, conf = openstack_config.load_paste_config(app_name,
-                                         options, args, config_dir=None)
+                                                             options,
+                                                             args,
+                                                             config_dir=None)
         cls.instance = conf
         return conf
 
