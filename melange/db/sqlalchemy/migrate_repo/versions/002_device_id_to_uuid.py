@@ -15,23 +15,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import optparse
-
-from melange import ipv4
-from melange import mac
-from melange import version
-from melange.common import config
-from melange.db import db_api
-from melange.db.sqlalchemy import session
-
 
 def upgrade(migrate_engine):
-    _db_connect()
-
-    interface = session.get_session().execute(
+    interface = migrate_engine.execute(
         "SELECT COUNT(1) as count FROM interfaces "
         "WHERE device_id NOT LIKE '%-%' AND device_id IS NOT NULL")
-    print(interface)
     if interface.fetchone().count > 0:
         print """
 ---------------------------------------------------------
@@ -50,30 +38,6 @@ $ python melange/db/sqlalchemy/migrate_repo/versions/002_device_id_to_uuid.py\\
 
 def downgrade(migrate_engine):
     pass
-
-
-def _db_connect():
-    # If you really need to do another migration before all of this goes into
-    # quantum, and you need to access the DB, this is what you need:
-    oparser = optparse.OptionParser(version="%%prog %s"
-                                    % version.version_string())
-    create_options(oparser)
-    (options, args) = config.parse_options(oparser)
-    conf, app = config.Config.load_paste_app('melange', options, args)
-    db_api.configure_db(conf, ipv4.plugin(), mac.plugin())
-
-
-def create_options(parser):
-    """Sets up the CLI and config-file options.
-    :param parser: The option parser
-    :returns: None
-    """
-    parser.add_option('-p', '--port', dest="port", metavar="PORT",
-                      type=int, default=9898,
-                      help="Port the Melange API host listens on. "
-                      "Default: %default")
-    config.add_common_options(parser)
-    config.add_log_options(parser)
 
 
 if __name__ == '__main__':
@@ -99,7 +63,6 @@ if __name__ == '__main__':
     from melange import mac
     from melange.common import config
     from melange.db import db_api
-    from melange.ipam import models
     from melange.db.sqlalchemy import session
     from melange.openstack.common import config as openstack_config
 
