@@ -17,19 +17,20 @@
 
 import datetime
 
-import melange
 from melange import tests
 from melange.common import config
+from melange.db.sqlalchemy import session
 from melange.ipam import models
 from melange.tests.factories import models as factory_models
 from melange.tests import functional
 
 
 def run_melange_manage(command):
-    melange_manage = tests.melange_bin_path('melange-manage')
-    config_file = tests.test_config_file()
+    cmd = dict(melange_manage=tests.melange_bin_path('melange-manage'),
+               config_file=tests.test_config_file(),
+               command=command)
     return functional.execute("%(melange_manage)s %(command)s "
-                              "--config-file=%(config_file)s" % locals())
+                              "--config-file=%(config_file)s" % cmd)
 
 
 class TestDBSyncCLI(tests.BaseTest):
@@ -48,7 +49,7 @@ class TestDBUpgradeCLI(tests.BaseTest):
 
 class TestDeleteDeallocatedIps(tests.BaseTest):
 
-    def test_deallocated_ips_get_deleted(self):
+    def test_deallocated_ips_get_freed(self):
         block = factory_models.PublicIpBlockFactory()
         ip = factory_models.IpAddressFactory(ip_block_id=block.id)
         block.deallocate_ip(ip.address)
@@ -60,7 +61,14 @@ class TestDeleteDeallocatedIps(tests.BaseTest):
         config_file = tests.test_config_file()
         functional.execute("{0} --config-file={1}".format(script, config_file))
 
-        self.assertIsNone(models.IpAddress.get(ip.id))
+        # NOTE(jkoelker) Dirty, but works. Reset the session_maker so a
+        #                new session is started in the current thread
+        session._MAKER = None
+
+        ip = models.IpAddress.get(ip.id)
+        self.assertFalse(ip.allocated)
+        self.assertIsNone(ip.interface)
+        self.assertIsNone(ip.used_by_tenant_id)
 
     def _push_back_deallocated_date(self, ip, seconds):
         secs_to_subtract = datetime.timedelta(seconds=int(seconds))
