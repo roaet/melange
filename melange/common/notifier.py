@@ -70,7 +70,7 @@ class LoggingNotifier(Notifier):
 class QueueNotifier(Notifier):
 
     def notify(self, level, msg):
-        topic = "%s.%s" % ("melange.notifier", level.upper())
+        topic = "%s.%s" % ("melange_notifications", level.lower())
 
         with messaging.Queue(topic, "notifier") as queue:
             queue.put(msg)
