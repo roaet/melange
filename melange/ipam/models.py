@@ -301,6 +301,10 @@ class IpBlock(ModelBase):
     def percent_used(self):
         return (float(self.ips_used) / self.size()) * 100.0
 
+    @property
+    def version(self):
+        return netaddr.IPNetwork(self.cidr).version
+
     def is_ipv6(self):
         return netaddr.IPNetwork(self.cidr).version == 6
 
@@ -1115,6 +1119,10 @@ class Network(ModelBase):
         return [ip for sublist in ips_by_block for ip in sublist]
 
     def allocate_ips(self, addresses=None, **kwargs):
+        version = kwargs.pop('version', None)
+        if version:
+            version = int(version)
+
         if addresses:
             return filter(None, [self._allocate_specific_ip(address, **kwargs)
                                  for address in addresses])
@@ -1122,6 +1130,9 @@ class Network(ModelBase):
         ips = []
         for blocks in self._block_partitions():
             for block in blocks:
+                if version is not None and block.version != version:
+                    continue
+
                 if block.max_allocation is not None:
                     if (block.ips_used >= block.max_allocation):
                         raise NetworkOverQuotaError(block.network_id)
