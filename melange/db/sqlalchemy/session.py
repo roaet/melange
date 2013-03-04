@@ -22,6 +22,7 @@ from sqlalchemy import create_engine
 from sqlalchemy import MetaData
 from sqlalchemy.exc import DisconnectionError
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import scoped_session
 
 from melange import ipam
 from melange.common import config
@@ -92,9 +93,10 @@ def get_session(autocommit=True, expire_on_commit=False):
     global _MAKER, _ENGINE
     if not _MAKER:
         assert _ENGINE
-        _MAKER = sessionmaker(bind=_ENGINE,
-                              autocommit=autocommit,
-                              expire_on_commit=expire_on_commit)
+        maker = sessionmaker(bind=_ENGINE,
+                             autocommit=autocommit,
+                             expire_on_commit=expire_on_commit)
+        _MAKER = scoped_session(maker)
     return _MAKER()
 
 

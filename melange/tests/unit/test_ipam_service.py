@@ -2723,10 +2723,7 @@ class TestInstanceInterfaceIpsController(ControllerTestBase):
 
         response = self.appv1_0.delete(url, status="*")
 
-        err_msg = ("IpAddress with {'address': u'22.22.22.22', "
-                   "'interface_id': u'%s'} for network net_id not found"
-                   % self.iface.id)
-        self.assertErrorResponse(response, webob.exc.HTTPNotFound, err_msg)
+        self.assertEqual(response.status_int, webob.exc.HTTPNotFound.code)
 
 
 class TestMacAddressRangesController(ControllerTestBase):
