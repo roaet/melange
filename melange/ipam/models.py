@@ -1205,12 +1205,17 @@ class Network(ModelBase):
             return filter(None, [self._allocate_specific_ip(address, **kwargs)
                                  for address in addresses])
 
-        ips = []
-        for blocks in self._block_partitions():
-            for block in blocks:
-                if version is not None and block.version != version:
-                    continue
+        ipv4_blocks = [block for block in self.ip_blocks
+                       if not block.is_ipv6() and
+                       (version is None or block.version == version)]
+        ipv6_blocks = [block for block in self.ip_blocks
+                       if block.is_ipv6() and
+                       (version is None or block.version == version)]
+        block_partitions = [ipv4_blocks, ipv6_blocks]
 
+        ips = []
+        for blocks in block_partitions:
+            for block in blocks:
                 if block.max_allocation is not None:
                     if (block.ips_used >= block.max_allocation):
                         raise NetworkOverQuotaError(block.network_id)
@@ -1245,12 +1250,6 @@ class Network(ModelBase):
                                    "network %(network)s not found")
                                  % (dict(conditions=conditions,
                                          network=self.id)))
-
-    def _block_partitions(self):
-        return [[block for block in self.ip_blocks
-                 if not block.is_ipv6()],
-                [block for block in self.ip_blocks
-                 if block.is_ipv6()]]
 
     def _allocate_specific_ip(self, address, **kwargs):
         ip_block = utils.find(lambda ip_block: ip_block.contains(address),
