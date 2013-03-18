@@ -648,7 +648,7 @@ class AllocatableIp(ModelBase):
 
 class IpAddress(ModelBase):
 
-    _data_fields = ['ip_block_id', 'address', 'version']
+    _data_fields = ['ip_block_id', 'address', 'version', 'allocated']
     on_create_notification_fields = ['used_by_tenant_id', 'id', 'ip_block_id',
                                      'used_by_device_id', 'created_at',
                                      'address']
