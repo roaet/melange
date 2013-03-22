@@ -431,6 +431,12 @@ class IpBlock(ModelBase):
             msg = _("IpBlock is full")
             raise exception.NoMoreAddressesError(msg)
 
+        ip = IpAddress.get_by(ip_block_id=self.id, address=address)
+        if ip:
+            ip.update(used_by_tenant_id=tenant_id,
+                      interface_id=interface_id,
+                      allocated=True)
+            return ip
         return IpAddress.create(address=address,
                                 ip_block_id=self.id,
                                 used_by_tenant_id=tenant_id,
