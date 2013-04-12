@@ -62,7 +62,7 @@ class Server(object):
     def __init__(self, threads=1000):
         self.pool = eventlet.GreenPool(threads)
 
-    def start(self, application, port, host='0.0.0.0', backlog=128):
+    def start(self, application, port, host='0.0.0.0', backlog=4096):
         """Run a WSGI server with the given application."""
         socket = eventlet.listen((host, port), backlog=backlog)
         self.pool.spawn_n(self._run, application, socket)
