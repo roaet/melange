@@ -736,7 +736,7 @@ class IpAddress(ModelBase):
         self.update(marked_for_deallocation=True,
                     allocated=False,
                     deallocated_at=utils.utcnow(),
-                    interface=None)
+                    interface_id=None)
 
     def restore(self):
         LOG.debug("Restored IP address: %r" % self)

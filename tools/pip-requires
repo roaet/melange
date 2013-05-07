@@ -10,7 +10,7 @@ sqlalchemy-migrate
 netaddr
 sphinx
 webtest
-factory_boy
+factory_boy<2.0
 httplib2
 lxml
 iso8601
