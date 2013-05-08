@@ -249,35 +249,68 @@ def delete_interface(interface):
     return None, []
 
 
-def allocate_ipv4_address(ip_block, interface, requested_address=None):
+def _allocate_allocatable_address(ip_block, interface,
+                                  requested_address=None):
+    """Slowly migrate off the AllocatableIps Table."""
     model = ipam.models.IpAddress
 
     db_session = session.get_session()
+    db_session.begin()
+
+    allocatable_qry = _query_by(ipam.models.AllocatableIp,
+                                db_session=db_session,
+                                ip_block_id=ip_block.id)
+    if requested_address is not None:
+        filter_kwargs = {'address': requested_address}
+        allocatable_qry = allocatable_qry.filter(**filter_kwargs)
+
+    allocatable_address = allocatable_qry.first()
+
+    if not allocatable_address:
+        db_session.commit()
+        return
+
+    ip = allocatable_address.address
+    address = model(id=utils.generate_uuid(),
+                    created_at=utils.utcnow(),
+                    updated_at=utils.utcnow(),
+                    address=str(ip),
+                    ip_block_id=ip_block.id,
+                    interface_id=interface.id,
+                    used_by_tenant_id=interface.tenant_id,
+                    allocated=True)
+    db_session.merge(address)
+
+    try:
+        db_session.flush()
+    except sqlalchemy.exc.IntegrityError:
+        db_session.rollback()
+        db_session.begin()
+        db_session.delete(allocatable_address)
+        db_session.commit()
+        LOG.debug("Allocatable ip %s in block %s was a dupe. Deleted" %
+                  (ip, ip_block.id))
+        return _allocate_allocatable_address(ip_block, interface,
+                                             requested_address)
+
+    db_session.delete(allocatable_address)
+    db_session.commit()
+    return address
+
+    db_session.delete(allocatable_qry.address)
+
+
+def allocate_ipv4_address(ip_block, interface, requested_address=None):
+    model = ipam.models.IpAddress
+
+    address = _allocate_allocatable_address(ip_block, interface,
+                                            requested_address)
+
+    if address:
+        return address
+
+    db_session = session.get_session()
     with db_session.begin():
-        # NOTE(jkoelker) This is here so we can slowly move off the table
-        allocatable_qry = _query_by(ipam.models.AllocatableIp,
-                                    db_session=db_session,
-                                    ip_block_id=ip_block.id)
-        if requested_address is not None:
-            filter_kwargs = {'address': requested_address}
-            allocatable_qry = allocatable_qry.filter(**filter_kwargs)
-
-        address = allocatable_qry.first()
-        if address:
-            ip = address.address
-            db_session.delete(address)
-            address = model(id=utils.generate_uuid(),
-                            created_at=utils.utcnow(),
-                            updated_at=utils.utcnow(),
-                            address=str(ip),
-                            ip_block_id=ip_block.id,
-                            interface_id=interface.id,
-                            used_by_tenant_id=interface.tenant_id,
-                            allocated=True)
-            db_session.merge(address)
-            return address
-        # NOTE(jkoelker) </end>
-
         address_qry = _query_by(model, db_session=db_session,
                                 allocated=False,
                                 marked_for_deallocation=False,
