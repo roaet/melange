@@ -542,6 +542,30 @@ class TestIpBlock(tests.BaseTest):
         self.assertEqual(models.IpBlock(parent_id=None).parent, None)
         self.assertEqual(models.IpBlock(parent_id='non-existent').parent, None)
 
+    def test_allocate_dupe_ip(self):
+        ip_block = factory_models.PrivateIpBlockFactory(cidr="10.0.0.0/29")
+        ip = ip_block.allocate_ip(factory_models.InterfaceFactory())
+        self.assertEqual(ip.address, '10.0.0.0')
+
+        factory_models.AllocatableIpFactory(ip_block_id=ip_block.id,
+                                            address="10.0.0.0")
+        interface = factory_models.InterfaceFactory()
+        ip = ip_block.allocate_ip(interface)
+        self.assertTrue(ip.address != '10.0.0.0')
+
+    def test_allocate_dupe_ip_noise(self):
+        ip_block = factory_models.PrivateIpBlockFactory(cidr="10.0.0.0/29")
+        ip = ip_block.allocate_ip(factory_models.InterfaceFactory())
+        self.assertEqual(ip.address, '10.0.0.0')
+
+        factory_models.AllocatableIpFactory(ip_block_id=ip_block.id,
+                                            address="10.0.0.0")
+        factory_models.AllocatableIpFactory(ip_block_id=ip_block.id,
+                                            address="10.0.0.1")
+        interface = factory_models.InterfaceFactory()
+        ip = ip_block.allocate_ip(interface)
+        self.assertEqual(ip.address, '10.0.0.1')
+
     def test_allocate_ip(self):
         block = factory_models.PrivateIpBlockFactory(cidr="10.0.0.0/31")
         interface = factory_models.InterfaceFactory()
