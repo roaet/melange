@@ -73,4 +73,5 @@ class InterfaceConfigurationView(object):
         data['mac_address'] = self.interface.mac_address_unix_format
         ip_addresses = self.interface.ip_addresses
         data['ip_addresses'] = IpConfigurationView(*ip_addresses).data()
+        data['vif_id_on_device'] = self.interface.vif_id_on_device
         return data
