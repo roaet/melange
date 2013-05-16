@@ -23,7 +23,7 @@ class IpConfigurationView(object):
 
     def data(self):
         data = []
-        for ip in self.ip_addresses:
+        for ip in sorted(self.ip_addresses, key=lambda ip: ip.updated_at):
             routes = ip.ip_block.ip_routes()
             ip_address_data = self._ip_address_data(ip)
             block_data = self._block_data(ip.ip_block)
