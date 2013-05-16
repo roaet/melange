@@ -428,6 +428,14 @@ class InterfacesController(BaseController, ShowAction, DeleteAction):
 
     _model = models.Interface
 
+    def update(self, request, interface_id, body=None):
+        interface = models.Interface.find_by(id=interface_id)
+        # NOTE(jkoelker) only setting the vif_id_on_device is supported
+        vif_id_on_device = body['vif_id_on_device']
+        interface.update(vif_id_on_device=vif_id_on_device)
+        view_data = views.InterfaceConfigurationView(interface).data()
+        return dict(interface=view_data)
+
     def create(self, request, body=None):
         params = self._extract_required_params(body, 'interface')
         params['virtual_interface_id'] = params.pop('id', None)
@@ -865,6 +873,11 @@ class APIV10(APICommon):
                  controller=interface_res,
                  action="delete",
                  conditions=dict(method=['DELETE']))
+        _connect(mapper,
+                 "/ipam/interfaces/{interface_id}",
+                 controller=interface_res,
+                 action="update",
+                 conditions=dict(method=['POST']))
         _connect(mapper,
                  "/ipam/interfaces",
                  controller=interface_res,

@@ -2137,6 +2137,14 @@ class TestInterfacesController(ControllerTestBase):
         self.assertEqual(response.json['interface']['tenant_id'], "tnt")
         self.assertEqual(response.json['interface']['device_id'], "instance")
 
+    def test_update_interface(self):
+        interface = factory_models.InterfaceFactory()
+        port_id = '9876'
+        res = self.appv1_0.post_json("/ipam/interfaces/%s" % interface.id,
+                                     {'vif_id_on_device': port_id})
+        self.assertEqual(interface.vif_id_on_device, port_id)
+        self.assertEqual(res.json['interface']['vif_id_on_device'], port_id)
+
     def test_create_with_given_address_in_network_details(self):
         ip_block = factory_models.PrivateIpBlockFactory(tenant_id="RAX",
                                                         network_id="net1",
