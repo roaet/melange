@@ -401,6 +401,9 @@ class IpBlock(ModelBase):
                 # NOTE(jkoelker) policy enforcement is no-bueno ;(
                 if not self._address_is_allocatable(self.policy(),
                                                     address.address):
+                    msg = "Address (%s) is not allocatable"
+                    LOG.debug(msg % address.address)
+
                     policy_excluded_addresses.append(address)
                     continue
 
@@ -470,12 +473,30 @@ class IpBlock(ModelBase):
         return IpAddress.allocate(self, interface, address=address)
 
     def _address_is_allocatable(self, policy, address):
-        unavailable_addresses = [self.gateway, self.broadcast]
-        return (address not in unavailable_addresses
-                and self._allowed_by_policy(policy, address))
+        msg = "Checking address (%s) for allocatability"
+        LOG.debug(msg % address)
+
+        msg = "Checking if address (%s) is the gateway (%s)"
+        LOG.debug(msg % (address, self.gateway))
+        if str(address) == str(self.gateway):
+            return False
+
+        msg = "Checking if address (%s) is the broadcast (%s)"
+        LOG.debug(msg % (address, self.broadcast))
+        if str(address) == str(self.broadcast):
+            return False
+
+        return self._allowed_by_policy(policy, address)
 
     def _allowed_by_policy(self, policy, address):
-        return policy is None or policy.allows(self.cidr, address)
+        msg = "Checking if policy is None for address (%s)"
+        LOG.debug(msg % address)
+        if policy is None:
+            msg = "Policy is None for address (%s)"
+            LOG.debug(msg % address)
+            return True
+
+        return policy.allows(self.cidr, address)
 
     def contains(self, address):
         return netaddr.IPAddress(address) in netaddr.IPNetwork(self.cidr)
