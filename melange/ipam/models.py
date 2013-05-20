@@ -324,7 +324,8 @@ class IpBlock(ModelBase):
             block.delete()
         IpAddress.find_all(ip_block_id=self.id).delete()
 
-        # NOTE(jkoelker) Clean up Allocatable IPs as we "slowly" move off the table
+        # NOTE(jkoelker) Clean up Allocatable IPs as we "slowly" move off the
+        #                table
         AllocatableIp.find_all(ip_block_id=self.id).delete()
 
         super(IpBlock, self).delete()
