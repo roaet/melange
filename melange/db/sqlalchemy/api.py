@@ -333,7 +333,7 @@ def allocate_ipv4_address(ip_block, interface, requested_address=None):
             ips = netaddr.IPNetwork(ip_block.cidr)
             counter = (ip_block.allocatable_ip_counter or ips[0].value)
 
-            if counter > ips[-1].value:
+            if counter >= ips[-1].value:
                 ip_block.is_full = True
                 # NOTE(jkoelker) explicit save() to flush the session prior
                 #                to raising
@@ -344,7 +344,7 @@ def allocate_ipv4_address(ip_block, interface, requested_address=None):
 
             # NOTE(jkoelker) HRM, this may need to be rethought order wise
             counter = counter + 1
-            if counter > ips[-1].value:
+            if counter >= ips[-1].value:
                 ip_block.is_full = True
 
             ip_block.allocatable_ip_counter = counter
