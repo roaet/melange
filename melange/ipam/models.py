@@ -396,12 +396,12 @@ class IpBlock(ModelBase):
                                                mac_address=mac_address,
                                                **kwargs)
 
-                address = IpAddress.allocate(ip_block=self,
-                                             interface=interface)
-                if not address:
-                    self.update(is_full=True)
-                    msg = _("IpBlock is full")
-                    raise exception.NoMoreAddressesError(msg)
+                try:
+                    address = IpAddress.allocate(ip_block=self,
+                                                 interface=interface)
+                except exception.NoMoreAddressesError:
+                    clear_addresses(policy_excluded_addresses)
+                    raise
 
                 # NOTE(jkoelker) policy enforcement is no-bueno ;(
                 if not self._address_is_allocatable(self.policy(),
