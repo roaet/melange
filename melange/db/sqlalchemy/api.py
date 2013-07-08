@@ -117,9 +117,9 @@ def remove_inside_globals(local_address_id, inside_global_address=None):
     def _filter_inside_global_address(natted_ips, inside_global_address):
         return natted_ips.join(
             (ipam.models.IpAddress,
-             mappers.IpNat.inside_global_address_id ==
-             ipam.models.IpAddress.id)).filter(
-                 ipam.models.IpAddress.address == inside_global_address)
+                mappers.IpNat.inside_global_address_id ==
+                ipam.models.IpAddress.id)).filter(
+            ipam.models.IpAddress.address == inside_global_address)
 
     _remove_natted_ips(_filter_inside_global_address,
                        inside_global_address,

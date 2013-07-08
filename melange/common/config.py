@@ -56,9 +56,9 @@ def setup_logging(options, conf):
                   get_option(conf, 'log_config', default=None))
     default_log_levels = (options.get('default_log_levels') or
                           get_option(conf, 'default_log_levels',
-                          default="sqlalchemy=WARN, "
-                                  "keystone=INFO, "
-                                  "eventlet.wsgi.server=WARN"))
+                                     default="sqlalchemy=WARN, "
+                                     "keystone=INFO, "
+                                     "eventlet.wsgi.server=WARN"))
     if log_config:
         # Use a logging configuration file for all settings...
         if os.path.exists(log_config):

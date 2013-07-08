@@ -125,8 +125,8 @@ class _Win32Colorizer(object):
     """
     def __init__(self, stream):
         from win32console import GetStdHandle, STD_OUT_HANDLE, \
-             FOREGROUND_RED, FOREGROUND_BLUE, FOREGROUND_GREEN, \
-             FOREGROUND_INTENSITY
+            FOREGROUND_RED, FOREGROUND_BLUE, FOREGROUND_GREEN, \
+            FOREGROUND_INTENSITY
         red, green, blue, bold = (FOREGROUND_RED, FOREGROUND_GREEN,
                                   FOREGROUND_BLUE, FOREGROUND_INTENSITY)
         self.stream = stream
@@ -341,8 +341,8 @@ if __name__ == '__main__':
     hdlr.setFormatter(formatter)
     logger.addHandler(hdlr)
     logger.setLevel(logging.DEBUG)
-    # If any argument looks like a test name but doesn't have "melange.tests" in
-    # front of it, automatically add that so we don't have to type as much
+    # If any argument looks like a test name but doesn't have "melange.tests"
+    # in front of it, automatically add that so we don't have to type as much
     show_elapsed = True
     argv = []
     for x in sys.argv:
