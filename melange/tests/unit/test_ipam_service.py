@@ -383,7 +383,7 @@ class TestIpBlockController(ControllerTestBase):
         ip_block = factory_models.PrivateIpBlockFactory(tenant_id="123")
         response = self.app.put_json("/ipam/tenants/321/ip_blocks/%s"
                                      % ip_block.id, {
-                                     'ip_block': {'network_id': "foo"},
+                                         'ip_block': {'network_id': "foo"},
                                      },
                                      status='*')
 
@@ -2447,12 +2447,13 @@ class TestInstanceInterfacesController(ControllerTestBase):
                                                  network_id=net_id)
         put_data = {
             'instance': {
-            'tenant_id': "tnt",
-            'interfaces': [
-                {'network': {'id': net_ids[0], 'tenant_id':"RAX"}},
-                {'network': {'id': net_ids[1], 'tenant_id':"RAX"}},
-                {'network': {'id': net_ids[2], 'tenant_id':"RAX"}},
-            ]},
+                'tenant_id': "tnt",
+                'interfaces': [
+                    {'network': {'id': net_ids[0], 'tenant_id':"RAX"}},
+                    {'network': {'id': net_ids[1], 'tenant_id':"RAX"}},
+                    {'network': {'id': net_ids[2], 'tenant_id':"RAX"}},
+                ],
+            },
         }
 
         response = self.app.put_json("/ipam/instances/instance_id/interfaces",

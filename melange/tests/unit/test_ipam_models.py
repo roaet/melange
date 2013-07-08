@@ -2628,7 +2628,7 @@ class TestAllowedIp(tests.BaseTest):
 
         self.assertRaisesExcMessage(models.ModelNotFoundError,
                                     _("Ip Address %s hasnt been allowed on "
-                                    "interface vif_1") % unshared_ip.address,
+                                      "interface vif_1") % unshared_ip.address,
                                     interface.find_allowed_ip,
                                     unshared_ip.address)
 

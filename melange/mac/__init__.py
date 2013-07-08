@@ -29,7 +29,7 @@ def plugin():
         pluggable_generator_file = config.Config.get(
             "mac_generator",
             os.path.join(os.path.dirname(__file__),
-            "db_based_mac_generator/__init__.py"))
+                         "db_based_mac_generator/__init__.py"))
 
         _PLUGIN = imp.load_source("pluggable_mac_generator",
                                   pluggable_generator_file)

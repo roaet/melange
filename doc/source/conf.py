@@ -129,7 +129,7 @@ man_pages = [
      [u'OpenStack'], 1),
     ('man/melangemanage', 'melange-manage', u'melange Management Utility',
      [u'OpenStack'], 1)
- ]
+]
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -219,8 +219,8 @@ htmlhelp_basename = 'melangedoc'
 # (source start file, target name, title, author,
 # documentclass [howto/manual]).
 latex_documents = [
-  ('index', 'melange.tex', u'melange Documentation',
-   u'melange Team', 'manual'),
+    ('index', 'melange.tex', u'melange Documentation',
+     u'melange Team', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
